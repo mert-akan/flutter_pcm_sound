@@ -24,6 +24,8 @@ typedef NS_ENUM(NSUInteger, LogLevel) {
 @property(nonatomic) int mNumChannels; 
 @property(nonatomic) int mFeedThreshold; 
 @property(nonatomic) bool mDidInvokeFeedCallback; 
+@property (nonatomic) AVAudioPlayer *audioPlayer; // Use AVAudioPlayer for demonstration
+@property (nonatomic) BOOL isPlaying;
 @end
 
 @implementation FlutterPcmSoundPlugin
@@ -58,11 +60,16 @@ typedef NS_ENUM(NSUInteger, LogLevel) {
         }
         else if ([@"setup" isEqualToString:call.method])
         {
+
             NSDictionary *args = (NSDictionary*)call.arguments;
             NSNumber *sampleRate       = args[@"sample_rate"];
             NSNumber *numChannels      = args[@"num_channels"];
+            [self setupRemoteControl];
+            [self updateNowPlayingInfo];
+            
 #if TARGET_OS_IOS
             NSString *iosAudioCategory = args[@"ios_audio_category"];
+
 #endif
 
             self.mNumChannels = [numChannels intValue];
@@ -281,6 +288,35 @@ typedef NS_ENUM(NSUInteger, LogLevel) {
         self.mSamples = [NSMutableData new]; 
     }
 }
+
+- (void)setupRemoteControl {
+    MPRemoteCommandCenter *commandCenter = [MPRemoteCommandCenter sharedCommandCenter];
+    
+    [commandCenter.playCommand addTargetWithHandler:^MPRemoteCommandHandlerStatus(MPRemoteCommandEvent * _Nonnull event) {
+        [self playAudio];
+        return MPRemoteCommandHandlerStatusSuccess;
+    }];
+    
+    [commandCenter.pauseCommand addTargetWithHandler:^MPRemoteCommandHandlerStatus(MPRemoteCommandEvent * _Nonnull event) {
+        [self pauseAudio];
+        return MPRemoteCommandHandlerStatusSuccess;
+    }];
+    
+    // Add other command handlers like next, previous if needed
+}
+
+- (void)updateNowPlayingInfo {
+    if (self.isPlaying) {
+        MPNowPlayingInfoCenter *playingInfoCenter = [MPNowPlayingInfoCenter defaultCenter];
+        NSMutableDictionary *nowPlayingInfo = [NSMutableDictionary dictionary];
+        [nowPlayingInfo setObject:@"Your Track Title" forKey:MPMediaItemPropertyTitle];
+        [nowPlayingInfo setObject:@"Artist Name" forKey:MPMediaItemPropertyArtist];
+        // Set more properties as needed
+        
+        playingInfoCenter.nowPlayingInfo = nowPlayingInfo;
+    }
+}
+
 
 static OSStatus RenderCallback(void *inRefCon,
                                AudioUnitRenderActionFlags *ioActionFlags,
