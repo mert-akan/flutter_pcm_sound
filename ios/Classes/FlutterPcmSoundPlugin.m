@@ -3,6 +3,7 @@
 
 #if TARGET_OS_IOS
 #import <AVFoundation/AVFoundation.h>
+#import <MediaPlayer/MediaPlayer.h>
 #endif
 
 #define kOutputBus 0
@@ -66,7 +67,7 @@ typedef NS_ENUM(NSUInteger, LogLevel) {
             NSNumber *numChannels      = args[@"num_channels"];
             [self setupRemoteControl];
             [self updateNowPlayingInfo];
-            
+
 #if TARGET_OS_IOS
             NSString *iosAudioCategory = args[@"ios_audio_category"];
 
