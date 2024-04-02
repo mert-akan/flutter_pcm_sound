@@ -194,6 +194,9 @@ typedef NS_ENUM(NSUInteger, LogLevel) {
                 result([FlutterError errorWithCode:@"AudioUnitError" message:message details:nil]);
                 return;
             }
+            
+            [self setupRemoteControl];
+            [self updateNowPlayingInfo];
 
             result(@(true));
         }
@@ -292,18 +295,12 @@ typedef NS_ENUM(NSUInteger, LogLevel) {
 
 - (void)setupRemoteControl {
     MPRemoteCommandCenter *commandCenter = [MPRemoteCommandCenter sharedCommandCenter];
+    NSLog(@"setupRemoteControl is called");
+    
     
     [commandCenter.playCommand addTargetWithHandler:^MPRemoteCommandHandlerStatus(MPRemoteCommandEvent * _Nonnull event) {
     self.mDidInvokeFeedCallback = false;
 
-    OSStatus status = AudioOutputUnitStart(_mAudioUnit);
-    if (status != noErr) {
-        NSString* message = [NSString stringWithFormat:@"AudioOutputUnitStart failed. OSStatus: %@", @(status)];
-        result([FlutterError errorWithCode:@"AudioUnitError" message:message details:nil]);
-        return;
-    }
-
-        result(@(true));
         return MPRemoteCommandHandlerStatusSuccess;
     }];
     
@@ -316,6 +313,7 @@ typedef NS_ENUM(NSUInteger, LogLevel) {
 
 - (void)updateNowPlayingInfo {
     if (self.isPlaying) {
+        NSLog(@"updateNowPlayingInfo is called");
         MPNowPlayingInfoCenter *playingInfoCenter = [MPNowPlayingInfoCenter defaultCenter];
         NSMutableDictionary *nowPlayingInfo = [NSMutableDictionary dictionary];
         [nowPlayingInfo setObject:@"Your Track Title" forKey:MPMediaItemPropertyTitle];
