@@ -294,12 +294,20 @@ typedef NS_ENUM(NSUInteger, LogLevel) {
     MPRemoteCommandCenter *commandCenter = [MPRemoteCommandCenter sharedCommandCenter];
     
     [commandCenter.playCommand addTargetWithHandler:^MPRemoteCommandHandlerStatus(MPRemoteCommandEvent * _Nonnull event) {
-        [self playAudio];
+    self.mDidInvokeFeedCallback = false;
+
+    OSStatus status = AudioOutputUnitStart(_mAudioUnit);
+    if (status != noErr) {
+        NSString* message = [NSString stringWithFormat:@"AudioOutputUnitStart failed. OSStatus: %@", @(status)];
+        result([FlutterError errorWithCode:@"AudioUnitError" message:message details:nil]);
+        return;
+    }
+
+        result(@(true));
         return MPRemoteCommandHandlerStatusSuccess;
     }];
     
     [commandCenter.pauseCommand addTargetWithHandler:^MPRemoteCommandHandlerStatus(MPRemoteCommandEvent * _Nonnull event) {
-        [self pauseAudio];
         return MPRemoteCommandHandlerStatusSuccess;
     }];
     
