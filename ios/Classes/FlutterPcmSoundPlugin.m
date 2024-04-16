@@ -67,6 +67,7 @@ typedef NS_ENUM(NSUInteger, LogLevel) {
             NSNumber *numChannels      = args[@"num_channels"];
             [self setupRemoteControl];
             [self updateNowPlayingInfo];
+            // [self configureRemoteCommandCenter];
 
 #if TARGET_OS_IOS
             NSString *iosAudioCategory = args[@"ios_audio_category"];
@@ -194,9 +195,7 @@ typedef NS_ENUM(NSUInteger, LogLevel) {
                 result([FlutterError errorWithCode:@"AudioUnitError" message:message details:nil]);
                 return;
             }
-            
-            [self setupRemoteControl];
-            [self updateNowPlayingInfo];
+        
 
             result(@(true));
         }
@@ -292,24 +291,60 @@ typedef NS_ENUM(NSUInteger, LogLevel) {
         self.mSamples = [NSMutableData new]; 
     }
 }
+- (void)configureRemoteCommandCenter {
+    MPRemoteCommandCenter *commandCenter = [MPRemoteCommandCenter sharedCommandCenter];
+
+    // Play command
+    commandCenter.playCommand.enabled = YES;
+    [commandCenter.playCommand addTarget:self action:@selector(playEventTriggered:)];
+    
+    // Pause command
+    commandCenter.pauseCommand.enabled = YES;
+    [commandCenter.pauseCommand addTarget:self action:@selector(pauseEventTriggered:)];
+}
+
 
 - (void)setupRemoteControl {
     MPRemoteCommandCenter *commandCenter = [MPRemoteCommandCenter sharedCommandCenter];
     NSLog(@"setupRemoteControl is called");
+    MPNowPlayingInfoCenter *playingInfoCenter = [MPNowPlayingInfoCenter defaultCenter];
+    NSMutableDictionary *nowPlayingInfo = [NSMutableDictionary dictionary];
+    [nowPlayingInfo setObject:@"Lilio Babyphone" forKey:MPMediaItemPropertyTitle];
+    [nowPlayingInfo setObject:@"Lilio" forKey:MPMediaItemPropertyArtist];
+    // Set more properties as needed
     
+    playingInfoCenter.nowPlayingInfo = nowPlayingInfo;
     
     [commandCenter.playCommand addTargetWithHandler:^MPRemoteCommandHandlerStatus(MPRemoteCommandEvent * _Nonnull event) {
     self.mDidInvokeFeedCallback = false;
-
+        NSLog(@"play event from command center triggered within setup");
+        AudioOutputUnitStart(_mAudioUnit);
         return MPRemoteCommandHandlerStatusSuccess;
     }];
     
     [commandCenter.pauseCommand addTargetWithHandler:^MPRemoteCommandHandlerStatus(MPRemoteCommandEvent * _Nonnull event) {
+        AudioOutputUnitStop(_mAudioUnit);
         return MPRemoteCommandHandlerStatusSuccess;
     }];
     
     // Add other command handlers like next, previous if needed
 }
+
+- (MPRemoteCommandHandlerStatus)playEventTriggered:(MPRemoteCommandEvent *)event {
+    // Start or resume playback with the audio unit
+    NSLog(@"play event from command center triggered");
+    AudioOutputUnitStart(_mAudioUnit);
+    return MPRemoteCommandHandlerStatusSuccess;
+}
+
+- (MPRemoteCommandHandlerStatus)pauseEventTriggered:(MPRemoteCommandEvent *)event {
+    // Pause playback with the audio unit
+    NSLog(@"pause event from command center triggered");
+    AudioOutputUnitStop(_mAudioUnit);
+    return MPRemoteCommandHandlerStatusSuccess;
+}
+
+
 
 - (void)updateNowPlayingInfo {
     if (self.isPlaying) {
